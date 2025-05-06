@@ -1,0 +1,9 @@
+if [ -d ~/.bashrc.d/share ]
+then
+    for rc in ~/.bashrc.d/share/*; do
+        if [ -f "${rc}" ]; then
+            . "${rc}"
+        fi
+    done
+fi
+unset rc

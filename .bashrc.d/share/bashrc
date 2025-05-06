@@ -1,0 +1,140 @@
+# BASE
+export EDITOR='/usr/bin/vi'
+
+# du all
+alias duu='sudo du -hs .[!.]* * |sort -h'
+
+alias la='ls -ltar'
+alias suu='sudo -i'
+
+# check command; echo and run command
+vcmd(){
+    hash "${1}" 2>/dev/null || { echo >&2 "command '${1}' does not exist"; return 3; }
+
+    echo "# ${*}" >&2
+    eval "${@}" || { echo >&2 "command '${1}' error"; return 10; }
+}
+
+e(){
+	echo $?
+}
+
+re(){
+	source ~/.bashrc
+}
+
+r(){
+	# reset colors
+	tput sgr0
+	# reset terminal
+	reset
+}
+
+# print range of lines of file; plines FILE start:1 end:10
+plines(){
+	[[ ! -f "${1}" ]] && return 1
+	sed -n "${2:-1},${3:-10}p" "${1}"
+}
+
+# ysap
+field(){
+	awk -F "${2:- }" "{ print \$${1:-1} }"
+}
+
+total ()
+{
+	awk -F "${2:- }" "{ s += \$${1:-1} } END { print s }"
+}
+
+# GIT
+alias gilo='git log --pretty=oneline --graph --decorate --all'
+alias gis='git status -sb'
+
+############# PS
+# simple PS1
+psun(){
+	PS1="${1:+"[${1}]"}\033[1m$\033[0m "
+}
+
+#export PS1="\[\e[1;$((RANDOM%100))m\][\u@\h \W]\$\[\e[0m\] "
+alias pskali="PS1='\[\e]0;\u@\h: \w\a\]\[\033[;94m\]┌──${debian_chroot:+($debian_chroot)──}${VIRTUAL_ENV:+(\[\033[0;1m\]$(basename $VIRTUAL_ENV)\[\033[;94m\])}(\[\033[1;31m\]\u㉿\h\[\033[;94m\])-[\[\033[0;1m\]\w\[\033[;94m\]]\n\[\033[;94m\]└─\[\033[1;31m\]\$\[\033[0m\] ';export PS1"
+
+#boxes
+# if [[ -e /run/.containerenv || -e /.dockerenv ]]
+# then
+        distroname(){
+                #local distro=$(grep '^NAME=' /etc/os-release 2>/dev/null  | cut -d '=' -f2 | tr -d '"' | cut -d ' ' -f1)
+		local distro=$(. /etc/os-release; echo ${ID})
+
+		[[ -n "${1}" ]] && 
+		local vid=$(. /etc/os-release; echo ${VERSION_ID})
+
+		[[ -n "${vid}" ]] && { echo "(${distro}:${vid})"; return 0; }
+                echo "${distro:+"(${distro})"}"
+        }
+
+        cname(){
+		# commented cause tmux as layer
+                #[[ -n "${TMUX}" ]] && return
+                # grep name /run/.containerenv  | sed -re 's/name=\"(.*)\"/\1/'
+                local cname=$(grep name /run/.containerenv 2>/dev/null  | cut -d '=' -f2 | tr -d '"')
+                echo -n "${cname:+"(${cname})"}"
+                [[ -n "${cname}" ]] && distroname y
+        }
+        gbranch(){
+                # git branch
+                local gbranch=$(git branch --show-current 2>/dev/null)
+                echo -n "${gbranch:+"(${gbranch})"}"
+        }
+
+        # not updateing same as $?
+        ecode(){
+		local ec=${?}
+		[[ -n ${debug} ]] && echo "$(((${ec}==0)) && color=32 || color=31; echo -en "(\e[${color}m${ec}\e[0m)")"
+        }
+
+        # emoji
+        unset emoji
+        [[ -e /run/.containerenv || -e /.dockerenv ]] && emoji="📦"
+	# commented cause tmux as layer
+        #[[ -n "${TMUX}" ]] && unset emoji
+
+        # user
+        color="32"
+	[[ "$(id -u)" -eq 0 ]] && { color="31"; emoji+="📛"; }
+
+        export PS1='${emoji}$(ecode)$(cname)\[\e[1;${color}m\][\u@\h \W]\[\e[0m\]$(gbranch)\$ '
+# fi
+
+
+################################# HISTORY FILE
+# avoid duplicates..
+export HISTCONTROL=ignoredups:erasedups
+
+# append history entries..
+shopt -s histappend
+
+# After each command, save and reload history
+export PROMPT_COMMAND="history -a; history -c; history -r; $PROMPT_COMMAND"
+HISTSIZE=100000
+HISTIGNORE="his*: *:pwd:ls:ba:nau:la:ll:l:h:re:dre:echo:cat:tf*:t:tv*:ansi :ansiraw:sshn:docx:a:aa:ac:as"
+
+export HISTTIMEFORMAT="%d/%m/%y %T "
+
+
+### TMUX
+alias ta='tmux a'
+alias rmux='tmux source-file ~/.tmux.conf'
+
+
+tn(){
+	tmux new-session -c "$(pwd)" -s "${1:-${USER}-${RANDOM}}" -d || return 0
+	tmux split-window -v
+	tmux split-window -h
+	
+	tmux select-pane -t 0
+	tmux split-window -h
+
+	tmux select-pane -t 0
+	[[ -z "${AT}" ]] && tmux -2 attach-session -d
+}
