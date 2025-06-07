@@ -6,8 +6,88 @@ alias ac='aichat -c'
 alias as='aichat -r %shell%'
 
 gitme(){
+	git diff 1>/dev/null 2>/dev/null ||
+	{ color "No diff found"; return 2; } &&
 	aichat --file '`git diff`' "generate git commit message"
 }
+
+yt(){
+	local url
+	unset yt_vid_id
+	[[ -z "${1}" ]] && { color "No params, input url or video id" >&2; return 2; }
+	if [[ "${1}" =~ ^https://[a-zA-Z0-9.-]+(\.[a-zA-Z]{2,})+(/.*)?$ ]]
+	then
+		url="${1}"
+		yt_vid_id="$(echo "$url" | sed 's/.*v=\([^&]*\).*/\1/')"
+	elif [[ "${#1}" -eq 11 ]]
+	then
+		url='https://www.youtube.com/watch?v='"${1}"
+		yt_vid_id="${1}"
+	else
+		color "${1} , seems like is not a id or url" >&2
+		return 2
+	fi
+
+	local wfolder='/tmp/yt'
+	local fname="${wfolder}/${yt_vid_id}"
+
+	if ! [[ -f "${fname}" && -s "${fname}" && -z "${r}" ]]
+	then
+		rm -rf /tmp/yt
+		mkdir -p ${wfolder}
+
+		[[ -n "${TS}" ]] &&
+		echo "
+		# INSTRUCTIONS
+		The following INPUT is a video transcript, and the FORMAT provided contains for each line the TIMESTAMP in brackets followed by the SENTENCE that was said at that TIMESTAMP. Be prepare to analyse and respond only based on the SENTENCES unles the TIMESTAMP is requested explicitely. The answers must be in order or appearance.
+
+		# INPUT
+		" > "${fname}"
+
+		local lec
+		local retries="${retries:-3}"
+
+		for ret in $(seq 1 ${retries})
+		do
+			vcmd fabric -y "${url}" --transcript ${TS:+"--transcript-with-timestamps"} >> "${fname}"
+			lec="${?}"
+
+			[[ "${lec}" -eq 0 ]] && break
+		done
+		[[ "${lec}" -ne 0 ]] && { rm "${fname}" 1>/dev/null 2>&1; return "${lec}"; }
+	fi
+
+	# fd = 0 stdin; and called just by itself
+	[[ -t 0 && "${#FUNCNAME[@]}" -eq 1 ]] && cat "${fname}" || echo "${fname}"
+}
+
+# TODO; links; light files; no temp files;
+# move file to /tmp/rag
+ftalk(){
+	! [[ -f "${1}" ]] && return 1
+
+	local wfolder='/tmp/rag'
+	eval rm -rvf "/tmp/rag/*"
+	# rm -rf "${wfolder}/*"
+
+	cp -v $(readlink -f "${1}") ${wfolder}/ &&
+	aichat --empty-session -s tmp --rag tmp --rebuild-rag &&
+	aichat --empty-session -s tmp --rag tmp
+}
+
+# dir
+dtalk(){
+	! [[ -d "${1}" ]] && return 1
+
+	local wfolder='/tmp/rag'
+	eval rm -rvf "/tmp/rag/*"
+	# rm -rf "${wfolder}/*"
+
+	cp -rv $(readlink -f "${1}") ${wfolder}/ &&
+	aichat --empty-session -s tmp --rag tmp --rebuild-rag &&
+	aichat --empty-session -s tmp --rag tmp
+}
+
 
 # download yt transcript and start rag session aichat
 ytalk(){
