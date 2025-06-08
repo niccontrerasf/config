@@ -6,12 +6,14 @@ alias duu='sudo du -hs .[!.]* * |sort -h'
 
 alias la='ls -ltar'
 alias suu='sudo -i'
+alias fnamescape="tr '[:space:][:punct:]' '_' | sed -Ee 's/^_+//g' -e 's/_+$//g' -e 's/_+/_/g'"
 
 # check command; echo and run command
 vcmd(){
     hash "${1}" 2>/dev/null || { echo >&2 "command '${1}' does not exist"; return 3; }
 
     echo "# ${*}" >&2
+    [[ -n "${debug}" ]] && return 0
     eval "${@}" || { echo >&2 "command '${1}' error"; return 10; }
 }
 
@@ -29,6 +31,7 @@ r(){
 	# reset terminal
 	reset
 }
+
 
 # print range of lines of file; plines FILE start:1 end:10
 plines(){
