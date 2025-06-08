@@ -61,51 +61,31 @@ yt(){
 	[[ -t 0 && "${#FUNCNAME[@]}" -eq 1 ]] && cat "${fname}" || echo "${fname}"
 }
 
-# TODO; links; light files; no temp files;
-# move file to /tmp/rag
-ftalk(){
-	! [[ -f "${1}" ]] && return 1
+atalk(){
+	! [[ -f "${1}" && -s "${1}" || -d "${1}" ]] && return 1
 
 	local wfolder='/tmp/rag'
 	eval rm -rvf "/tmp/rag/*"
-	# rm -rf "${wfolder}/*"
+	mkdir -p '/tmp/rag'
 
-	cp -v $(readlink -f "${1}") ${wfolder}/ &&
+	ln -s $(readlink -f "${1}") ${wfolder}/ &&
 	aichat --empty-session -s tmp --rag tmp --rebuild-rag &&
 	aichat --empty-session -s tmp --rag tmp
 }
-
-# dir
-dtalk(){
-	! [[ -d "${1}" ]] && return 1
-
-	local wfolder='/tmp/rag'
-	eval rm -rvf "/tmp/rag/*"
-	# rm -rf "${wfolder}/*"
-
-	cp -rv $(readlink -f "${1}") ${wfolder}/ &&
-	aichat --empty-session -s tmp --rag tmp --rebuild-rag &&
-	aichat --empty-session -s tmp --rag tmp
-}
-
 
 # download yt transcript and start rag session aichat
 ytalk(){
 	# $1 youtube id
 	
-	local wfolder='/tmp/yt'
-	# cleanup temp folder
-	rm -rf /tmp/yt
-	mkdir -p ${wfolder}
+	local fname
+	fname="$(yt "${1}")" || return 10
 
-	# download transcript `fabric`	
-	local fname="${wfolder}/${1}"
-	
-	[[ ! -f "${fname}" ]] && {
-		vcmd fabric -y 'https://www.youtube.com/watch?v='"${1}" --transcript > ${fname}
+	[[ -f "${fname}" && -s "${fname}" ]] && {
+
 		# run aichat with rag and try lo relog files, as it used old rag
 		tput setaf 1;echo .rebuild rag;tput sgr0
 
+		# tmux alternative # commented
 		[[ -n "${TMUX}" ]] &&
 		{
 			# -t pop:0.1
@@ -113,8 +93,7 @@ ytalk(){
 		# force rebuild rag from files when using tmux
 		#	(sleep 2; tmux send-keys -t ${ptarget} ".rebuild rag" C-m) >/dev/null 2>&1 &
 		}
-		# open cli then rebuild rag
-		# aichat --empty-session -s yt --rag yt
+
 		aichat --empty-session -s yt --rag yt --rebuild-rag
 		aichat --empty-session -s yt --rag yt
 	}
@@ -122,13 +101,15 @@ ytalk(){
 
 # fabric https://github.com/danielmiessler/fabric
 summ(){
-	fabric -y "https://www.youtube.com/watch?v=${1}" -s -p "${2:-"summarize"}"
+	local fname
+	fname="$(yt "${1}")" && cat < "${fname}" | fabric -s -p "${2:-"summarize"}"
 }
 
 ytsum() {
-	fabric -y "https://www.youtube.com/watch?v=${1}" -s -p "${2:-"yt_takeaways"}"
+	summ "${1}" "yt_takeaways"
 }
 
 sum10(){
-	fabric -y "https://www.youtube.com/watch?v=${1}" --transcript | fabric "Summarize in ${2:-10} words"
+	local fname
+	fname="$(yt "${1}")" && cat < "${fname}" | fabric "Summarize in ${2:-10} words"
 }
