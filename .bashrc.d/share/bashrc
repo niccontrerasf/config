@@ -4,7 +4,7 @@ export EDITOR='/usr/bin/vi'
 # du all
 alias duu='sudo du -hs .[!.]* * |sort -h'
 
-alias la='ls -ltar'
+alias la='ls -ltarh'
 alias suu='sudo -i'
 alias fnamescape="tr '[:space:][:punct:]' '_' | sed -Ee 's/^_+//g' -e 's/_+$//g' -e 's/_+/_/g'"
 
